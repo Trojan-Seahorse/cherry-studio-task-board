@@ -50,18 +50,111 @@ Bun + TypeScript + SQLite + MCP 协议的任务管理系统。为 Cherry Studio 
 | **自动备份** | SQLite 数据库一键备份 |
 | **全文搜索** | 标题 + 描述 + 评论全文检索 |
 
-## 快速开始
+## 部署说明
+
+本看板由两部分组成：**MCP Server**（供 Agent 调用）和 **看板前端**（Mini App / 浏览器）。MCP Server 启动后会同时提供 HTTP 服务（端口 17850），前端通过 HTTP API 读写数据。
+
+> 参考：[Cherry Studio 官方文档 — 配置和使用 MCP](https://docs.cherry-ai.com/advanced-basic/mcp/config)、[小程序（Mini App）](https://docs.cherry-ai.com/cherry-studio/preview/app)
+
+### 0. 前置条件
+
+安装 Bun 运行时（Cherry Studio 支持 `bun` / `node` / `uvx` 三种 MCP 运行时）：
+
+```powershell
+# Windows（PowerShell）
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
 
 ```bash
-# 安装依赖
-bun install
-
-# 启动 MCP + HTTP 一体服务器（端口 17850）
-bun run mcp-server.ts
-
-# 浏览器打开看板
-# http://localhost:17850/kanban
+# macOS / Linux
+curl -fsSL https://bun.sh/install | bash
 ```
+
+### 1. 安装项目依赖
+
+```bash
+cd task-board
+bun install
+```
+
+### 2. 在 Cherry Studio 中配置 MCP 服务器
+
+打开 Cherry Studio → `设置` → `MCP 服务器` → `添加服务器`，填写：
+
+| 字段 | 值 | 说明 |
+|------|----|------|
+| **名称** | `任务看板` | 自定义名称，用于在工具列表中识别 |
+| **类型** | `STDIO` | 本地命令行方式运行 |
+| **命令** | `<bun 路径>` | 例如 `C:\Users\<用户名>\.cherrystudio\bin\bun.exe` |
+| **参数** | `run` `D:\Cherry Studio\task-board\mcp-server.ts` | 两个参数分行填写：第一行 `run`，第二行 `.ts 文件的绝对路径` |
+| **环境变量** | （可选）`TASK_BOARD_DB=自定义数据库路径` | 不填则默认使用 `../data/tasks.db` |
+
+或直接编辑 JSON（点 `编辑 JSON`，粘贴以下内容后修改路径）：
+
+```json
+{
+  "mcpServers": {
+    "task-board": {
+      "command": "C:\\Users\\<用户名>\\.cherrystudio\\bin\\bun.exe",
+      "args": [
+        "run",
+        "D:\\Cherry Studio\\task-board\\mcp-server.ts"
+      ],
+      "env": {
+        "TASK_BOARD_DB": "D:\\Cherry Studio\\data\\tasks.db"
+      }
+    }
+  }
+}
+```
+
+点击 `保存` 后，Cherry Studio 会自动启动 MCP Server。可点击服务器条目查看运行状态。
+
+> **提示**：如果命令找不到，使用 `bun` 或 `bun.exe` 的绝对路径。用 `where bun` (Windows) 或 `which bun` (macOS/Linux) 查找。
+
+### 3. 启用 MCP 工具
+
+**对话模式**：在聊天界面输入框下方找到 MCP 工具图标 → 勾选 `任务看板` → 正常聊天，Agent 会自动调用。
+
+**Agent 模式**：进入 Agent 编辑界面 → `工具` 选项卡 → 在 "MCP" 分组下勾选 `任务看板` → Agent 自主决定何时调用。
+
+### 4. 添加看板前端（Mini App）
+
+看板有**两种使用方式**：
+
+#### 方式 A：作为 Cherry Studio 自定义 Mini App（推荐）
+
+1. 确保 MCP Server 已启动（步骤 2 完成即自动启动，HTTP 端口 17850）
+2. 打开 Cherry Studio → 顶部 `+` 进入 **启动台** → `小程序`
+3. 滑到底部点击 `自定义`，填写：
+
+| 字段 | 值 |
+|------|----|
+| 名称 | `任务看板` |
+| URL | `http://localhost:17850/kanban` |
+| 图标 | 任意图片 URL 或留空 |
+
+4. 保存后即可在 Mini App 网格中打开看板
+
+右键看板图标 → `添加到启动台` 可固定到顶部 Tab 栏方便快速切换。
+
+> **关于 `data:` URL**：项目中 `data-url.txt` 包含 HTML 的 base64 编码，可用作 Mini App 的 URL（将内容直接粘贴到 URL 字段），但 **不推荐**——因为 `data:` URL 的 webview 受浏览器同源策略限制，**无法通过 `fetch` 访问 `localhost:17850`**，导致看板无法加载数据。始终使用 HTTP 方式加载看板。
+
+#### 方式 B：浏览器直接打开
+
+```
+http://localhost:17850/kanban
+```
+
+适用场景：需要浏览器 DevTools 调试，或 Cherry Studio 未运行时在浏览器中查看。
+
+### 5. 验证部署
+
+在聊天框中输入：
+
+> 帮我列出当前所有任务
+
+Agent 调用 `list_tasks` 工具即表示 MCP 连接正常。同时打开 Mini App 看板，应能看到与 Agent 操作同步的任务数据。
 
 ## 数据库
 
