@@ -1,0 +1,15 @@
+{
+  "name": "cherry-studio-task-board",
+  "version": "0.2.0",
+  "description": "Cherry Studio 任务看板 · MCP Server (Bun + SQLite) — Kanban / Gantt / 多项目 / 归档",
+  "author": "Xi Ewell",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "bun run mcp-server.ts",
+    "init-db": "bun run mcp-server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

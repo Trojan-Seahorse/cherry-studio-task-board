@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cherry Studio · 任务看板</title>
+<style>
+  :root { --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e1e4ed; --muted: #6b7085; --accent: #6366f1; --success: #22c55e; --warn: #f59e0b; --danger: #ef4444; --backlog: #6b7280; --todo: #3b82f6; --progress: #8b5cf6; --done: #22c55e; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 600; color: var(--accent); }
+  nav { display: flex; gap: 4px; }
+  nav button { padding: 6px 14px; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 13px; }
+  nav button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .board { flex: 1; display: flex; gap: 12px; padding: 16px 20px; overflow-x: auto; }
+  .column { flex: 1; min-width: 240px; max-width: 340px; background: var(--card); border-radius: 10px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+  .column-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+  .column-header .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .column-header .count { margin-left: auto; background: var(--border); padding: 2px 8px; border-radius: 10px; font-size: 11px; color: var(--muted); }
+  .col-backlog .dot { background: var(--backlog); }
+  .col-todo .dot { background: var(--todo); }
+  .col-progress .dot { background: var(--progress); }
+  .col-done .dot { background: var(--done); }
+  .task-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .task-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: all .15s; }
+  .task-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .task-card .title { font-size: 13px; font-weight: 500; margin-bottom: 6px; line-height: 1.4; }
+  .task-card .meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+  .task-card .priority { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+  .priority-4, .priority-5 { background: #fef2f2; color: var(--danger); }
+  .priority-3 { background: #fffbeb; color: var(--warn); }
+  .priority-1, .priority-2 { background: #f0fdf4; color: var(--success); }
+  .progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .progress-bar .fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--muted); }
+  .add-btn { padding: 8px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); text-align: center; cursor: pointer; font-size: 12px; margin: 8px; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Cherry Studio · 任务看板</h1>
+  <nav>
+    <button class="active" onclick="switchView('kanban')">看板</button>
+    <button onclick="switchView('gantt')">甘特图</button>
+    <button onclick="switchView('list')">列表</button>
+  </nav>
+</header>
+
+<div id="kanban-view" class="board">
+  <div class="column col-backlog">
+    <div class="column-header"><span class="dot"></span> Backlog <span class="count" id="cnt-backlog">0</span></div>
+    <div class="task-list" id="list-backlog"></div>
+    <div class="add-btn" onclick="addTask('backlog')">+ 新建任务</div>
+  </div>
+  <div class="column col-todo">
+    <div class="column-header"><span class="dot"></span> Todo <span class="count" id="cnt-todo">0</span></div>
+    <div class="task-list" id="list-todo"></div>
+    <div class="add-btn" onclick="addTask('todo')">+ 新建任务</div>
+  </div>
+  <div class="column col-progress">
+    <div class="column-header"><span class="dot"></span> In Progress <span class="count" id="cnt-in-progress">0</span></div>
+    <div class="task-list" id="list-in-progress"></div>
+    <div class="add-btn" onclick="addTask('in-progress')">+ 新建任务</div>
+  </div>
+  <div class="column col-done">
+    <div class="column-header"><span class="dot"></span> Done <span class="count" id="cnt-done">0</span></div>
+    <div class="task-list" id="list-done"></div>
+  </div>
+</div>
+
+<div id="gantt-view" style="display:none;flex:1;padding:20px;">
+  <iframe src="/gantt-prototype.html" style="width:100%;height:100%;border:none;border-radius:10px;"></iframe>
+</div>
+
+<div id="list-view" style="display:none;flex:1;padding:16px 20px;overflow:auto;">
+  <table id="task-table" style="width:100%;border-collapse:collapse;">
+    <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
+      <th style="padding:8px;">标题</th><th style="padding:8px;">状态</th><th style="padding:8px;">优先级</th><th style="padding:8px;">进度</th><th style="padding:8px;">截止日期</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const API = '/api/tasks';
+const STATUSES = ['backlog', 'todo', 'in-progress', 'done'];
+const STATUS_LABELS = { backlog: 'Backlog', todo: 'Todo', 'in-progress': 'In Progress', done: 'Done' };
+const PRIORITY_LABELS = { 5: '紧急', 4: '高', 3: '中', 2: '低', 1: '很低' };
+
+async function fetchTasks() {
+  const res = await fetch(API);
+  const tasks = await res.json();
+  renderBoard(tasks);
+  renderList(tasks);
+}
+
+function renderBoard(tasks) {
+  const grouped = {};
+  STATUSES.forEach(s => grouped[s] = []);
+  tasks.forEach(t => { if (grouped[t.status]) grouped[t.status].push(t); });
+
+  STATUSES.forEach(status => {
+    const list = document.getElementById('list-' + status);
+    const count = document.getElementById('cnt-' + status);
+    const items = grouped[status];
+    count.textContent = items.length;
+
+    if (items.length === 0) {
+      list.innerHTML = '<div class="empty-state">暂无任务</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(t => `
+      <div class="task-card" onclick="quickEdit('${t.id}')" title="${t.description || ''}">
+        <div class="title">${escapeHtml(t.title)}</div>
+        <div class="meta">
+          ${t.priority > 0 ? `<span class="priority priority-${t.priority}">${PRIORITY_LABELS[t.priority] || 'P' + t.priority}</span>` : ''}
+          ${t.due_date ? `<span>📅 ${t.due_date}</span>` : ''}
+          ${t.assigned_to ? `<span>👤 ${escapeHtml(t.assigned_to)}</span>` : ''}
+        </div>
+        ${t.progress > 0 ? `<div class="progress-bar"><div class="fill" style="width:${t.progress}%"></div></div>` : ''}
+      </div>
+    `).join('');
+  });
+}
+
+function renderList(tasks) {
+  const tbody = document.querySelector('#task-table tbody');
+  tbody.innerHTML = tasks.map(t => `
+    <tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="quickEdit('${t.id}')">
+      <td style="padding:8px;">${escapeHtml(t.title)}</td>
+      <td style="padding:8px;">${STATUS_LABELS[t.status]}</td>
+      <td style="padding:8px;">${PRIORITY_LABELS[t.priority] || '-'}</td>
+      <td style="padding:8px;">${t.progress}%</td>
+      <td style="padding:8px;">${t.due_date || '-'}</td>
+    </tr>
+  `).join('');
+}
+
+function switchView(view) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('kanban-view').style.display = view === 'kanban' ? 'flex' : 'none';
+  document.getElementById('gantt-view').style.display = view === 'gantt' ? 'flex' : 'none';
+  document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
+}
+
+async function addTask(status) {
+  const title = prompt('任务标题:');
+  if (!title) return;
+  await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, status })
+  });
+  fetchTasks();
+}
+
+async function quickEdit(id) {
+  const resp = await fetch(API + '?status=all');
+  const tasks = await resp.json();
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  const newStatus = prompt(
+    `任务: ${task.title}\n当前状态: ${STATUS_LABELS[task.status]}\n进度: ${task.progress}%\n\n移动到 (backlog/todo/in-progress/done 或输入新标题):`,
+    task.title
+  );
+  if (!newStatus) return;
+
+  if (STATUSES.includes(newStatus)) {
+    await fetch(API + '/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+  } else if (newStatus !== task.title) {
+    await fetch(API + '/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newStatus })
+    });
+  }
+  fetchTasks();
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+fetchTasks();
+setInterval(fetchTasks, 30000);
+</script>
+</body>
+</html>

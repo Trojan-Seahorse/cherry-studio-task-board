@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cherry Studio · 甘特图</title>
+<style>
+  :root { --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e1e4ed; --muted: #6b7085; --accent: #6366f1; --success: #22c55e; --warn: #f59e0b; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+  h2 { font-size: 17px; margin-bottom: 16px; color: var(--accent); }
+  .timeline { position: relative; padding-left: 220px; overflow-x: auto; min-height: 300px; }
+  .gantt-row { display: flex; align-items: center; height: 36px; margin-bottom: 4px; position: relative; }
+  .gantt-label { position: absolute; left: -220px; width: 210px; text-align: right; padding-right: 12px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .gantt-bar-bg { flex: 1; height: 24px; background: var(--card); border-radius: 4px; position: relative; }
+  .gantt-bar { position: absolute; top: 2px; height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; font-size: 10px; white-space: nowrap; }
+  .bar-done { background: var(--success); }
+  .bar-progress { background: var(--accent); }
+  .bar-todo { background: var(--warn); }
+  .bar-backlog { background: var(--muted); }
+  .header-row { margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .header-row .gantt-bar-bg { background: transparent; display: flex; }
+  .day-marker { flex: 1; text-align: center; font-size: 10px; color: var(--muted); }
+  .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--warn); z-index: 10; opacity: .5; }
+  .no-data { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+  .legend { display: flex; gap: 16px; margin-top: 16px; font-size: 11px; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h2>📊 甘特图 · 任务时间线</h2>
+
+<div id="gantt-container">
+  <div class="timeline" id="timeline"></div>
+</div>
+
+<div class="no-data" id="no-data" style="display:none;">暂无带日期的任务。在看板中为任务设置开始/截止日期即可在此查看。</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--success)"></span> Done</span>
+  <span><span class="dot" style="background:var(--accent)"></span> In Progress</span>
+  <span><span class="dot" style="background:var(--warn)"></span> Todo</span>
+  <span><span class="dot" style="background:var(--muted)"></span> Backlog</span>
+  <span style="margin-left:auto;font-style:italic">提示: 右键页面刷新数据</span>
+</div>
+
+<script>
+const API = parent.location ? '/api/tasks?status=all' : '../api/tasks?status=all';
+const DAY_WIDTH = 40;
+
+async function loadGantt() {
+  try {
+    const res = await fetch(API);
+    const tasks = await res.json();
+
+    // Filter tasks with dates
+    const dated = tasks.filter(t => t.start_date || t.due_date);
+    if (dated.length === 0) {
+      document.getElementById('timeline').innerHTML = '';
+      document.getElementById('no-data').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('no-data').style.display = 'none';
+
+    // Calculate date range
+    const today = new Date();
+    let dates = [];
+    dated.forEach(t => {
+      if (t.start_date) dates.push(new Date(t.start_date));
+      if (t.due_date) dates.push(new Date(t.due_date));
+    });
+
+    let minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    let maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Extend range
+    minDate.setDate(minDate.getDate() - 3);
+    maxDate.setDate(maxDate.getDate() + 5);
+
+    const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Build day headers
+    const days = [];
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(minDate);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+
+    // Find today position
+    const todayOffset = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
+
+    // Render header
+    let html = '<div class="gantt-row header-row">';
+    html += '<div class="gantt-label"></div>';
+    html += '<div class="gantt-bar-bg" style="display:flex">';
+    days.forEach((d, i) => {
+      html += `<div class="day-marker" style="width:${DAY_WIDTH}px">${d.getMonth()+1}/${d.getDate()}</div>`;
+    });
+    html += '</div></div>';
+
+    // Today line
+    html += `<div class="today-line" style="left:${220 + todayOffset * DAY_WIDTH}px"></div>`;
+
+    // Render task bars
+    dated.forEach((t, idx) => {
+      const startDate = t.start_date ? new Date(t.start_date) : new Date(t.due_date);
+      const endDate = t.due_date ? new Date(t.due_date) : new Date(t.start_date);
+      endDate.setDate(endDate.getDate() + 1); // Show at least 1 day
+
+      const startOffset = Math.max(0, Math.ceil((startDate - minDate) / (1000 * 60 * 60 * 24)));
+      const barDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
+
+      const barClass = t.status === 'done' ? 'bar-done' : t.status === 'in-progress' ? 'bar-progress' : t.status === 'todo' ? 'bar-todo' : 'bar-backlog';
+      const label = t.title.length > 25 ? t.title.substring(0, 25) + '…' : t.title;
+
+      html += `<div class="gantt-row">
+        <div class="gantt-label" title="${t.title}">${t.title}</div>
+        <div class="gantt-bar-bg">
+          <div class="gantt-bar ${barClass}" style="left:${startOffset * DAY_WIDTH}px;width:${barDays * DAY_WIDTH - 4}px">${label}</div>
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('timeline').innerHTML = html;
+  } catch (e) {
+    document.getElementById('timeline').innerHTML = `<div class="no-data">加载失败: ${e.message}</div>`;
+  }
+}
+
+loadGantt();
+</script>
+</body>
+</html>
