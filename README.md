@@ -1,4 +1,4 @@
-# Cherry Studio 任务看板
+# Cardo
 
 Bun + TypeScript + SQLite + MCP 协议的任务管理系统。为 Cherry Studio Agent 提供 Kanban / Gantt / 列表 / 多项目 / 归档等完整任务管理能力。
 
@@ -59,8 +59,8 @@ Bun + TypeScript + SQLite + MCP 协议的任务管理系统。为 Cherry Studio 
 ### 1. 下载项目
 
 ```powershell
-git clone https://github.com/Trojan-Seahorse/cherry-studio-task-board.git
-cd cherry-studio-task-board
+git clone https://github.com/Trojan-Seahorse/cardo.git
+cd cardo
 ```
 
 或者直接下载 ZIP 解压到本地目录。
@@ -82,7 +82,7 @@ C:\Users\<用户名>\.cherrystudio\bin\bun.exe install
 ```json
 {
   "mcpServers": {
-    "task-board": {
+    "cardo": {
       "command": "C:\\Users\\<用户名>\\.cherrystudio\\bin\\bun.exe",
       "args": [
         "run",
@@ -102,8 +102,8 @@ C:\Users\<用户名>\.cherrystudio\bin\bun.exe install
 
 ### 4. 启用 MCP 工具
 
-- **对话模式**：聊天框下方找到 MCP 工具图标 → 勾选 `task-board`
-- **Agent 模式**：Agent 编辑 → `工具` → MCP 分组下勾选 `task-board`
+- **对话模式**：聊天框下方找到 MCP 工具图标 → 勾选 `cardo`
+- **Agent 模式**：Agent 编辑 → `工具` → MCP 分组下勾选 `cardo`
 
 ### 5. 添加看板前端为 Mini App（推荐）
 
@@ -150,9 +150,9 @@ C:\Users\<用户名>\.cherrystudio\bin\bun.exe build --compile mcp-server.ts --o
 ```json
 {
   "manifest_version": "0.3",
-  "name": "cherry-studio-task-board",
+  "name": "cardo",
   "version": "0.2.0",
-  "description": "Cherry Studio 任务看板 · Kanban / Gantt / 多项目 / 归档",
+  "description": "Cardo · Kanban / Gantt / 多项目 / 归档",
   "author": { "name": "Xi Ewell" },
   "server": {
     "type": "binary",
@@ -176,7 +176,7 @@ C:\Users\<用户名>\.cherrystudio\bin\bun.exe build --compile mcp-server.ts --o
 #   task-board/
 #     manifest.json
 #     server/mcp-server.exe
-Compress-Archive -Path manifest.json, server -DestinationPath task-board.mcpb
+Compress-Archive -Path manifest.json, server -DestinationPath cardo.mcpb
 ```
 
 #### 安装

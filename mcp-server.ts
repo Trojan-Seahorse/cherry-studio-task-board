@@ -1,5 +1,5 @@
 /**
- * Cherry Studio 任务看板 · MCP Server
+ * Cardo · MCP Server
  * Bun + TypeScript + SQLite + @modelcontextprotocol/sdk
  *
  * 提供 4 个 MCP 工具:
@@ -198,7 +198,7 @@ function withDeadlineAlert(result: any): any {
 // ── MCP Server ────────────────────────────────────────────
 
 const server = new McpServer({
-  name: "cherry-studio-task-board",
+  name: "cardo",
   version: "0.1.0",
 });
 

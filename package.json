@@ -1,7 +1,7 @@
 {
-  "name": "cherry-studio-task-board",
+  "name": "cardo",
   "version": "0.2.0",
-  "description": "Cherry Studio 任务看板 · MCP Server (Bun + SQLite) — Kanban / Gantt / 多项目 / 归档",
+  "description": "Cardo · MCP Server (Bun + SQLite) — Kanban / Gantt / 多项目 / 归档",
   "author": "Xi Ewell",
   "license": "MIT",
   "type": "module",
